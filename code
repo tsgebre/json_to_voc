@@ -1,0 +1,47 @@
+import json
+import xml.etree.cElementTree as ET
+import os
+
+def coco_to_voc(coco_json_path, output_folder):
+    with open(coco_json_path, 'r') as f:
+        coco_data = json.load(f)
+
+    for image in coco_data['images']:
+        root = ET.Element('annotation')
+
+        # Add image info
+        filename = image['file_name']
+        size = image['height'], image['width'], image['depth']
+
+        ET.SubElement(root, 'filename').text = filename
+        ET.SubElement(root, 'size').text = f"{size[0]},{size[1]},{size[2]}"
+
+        # Add object info
+        for ann in coco_data['annotations']:
+            if ann['image_id'] == image['id']:
+                obj = ET.SubElement(root, 'object')
+
+                cat_id = ann['category_id']
+                cat_name = coco_data['categories'][cat_id]['name']
+
+                ET.SubElement(obj, 'name').text = cat_name
+                ET.SubElement(obj, 'pose').text = 'Unspecified'
+                ET.SubElement(obj, 'truncated').text = '0'
+                ET.SubElement(obj, 'difficult').text = '0'
+
+                bbox = ann['bbox']
+                x_min, y_min, w, h = bbox[0], bbox[1], bbox[2], bbox[3]
+
+                ET.SubElement(obj, 'bndbox').text = f"{int(x_min)},{int(y_min)},{int(x_min+w)},{int(y_min+h)}"
+
+        # Save XML file
+        xml_filename = os.path.splitext(filename)[0] + '.xml'
+        xml_filepath = os.path.join(output_folder, xml_filename)
+
+        tree = ET.ElementTree(root)
+        tree.write(xml_filepath)
+
+        print(f"Conversion for image {filename} is completed successfully.")
+
+# Example usage
+coco_to_voc('path/to/coco.json', 'path/to/output/folder')
